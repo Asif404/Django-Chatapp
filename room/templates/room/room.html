@@ -1,0 +1,104 @@
+{% extends 'core/base.html' %}
+{% block title %} {{ room.name }} {% endblock%}
+
+{% block content %}
+
+<div class="d-flex align-items-center flex-column justify-content-center h-100">
+    <h1 class="display-4">{{ room.name }}</h1>
+    Welcome To chatapp Rooms
+    <div class="col-md-3">
+
+        <div class="card card-success card-outline direct-chat direct-chat-success shadow-sm">
+            <div class="card-header">
+                <h3 class="card-title">{{ room.name }} - chat</h3>
+          
+            </div>
+
+            <div class="card-body">
+                <div class="direct-chat-messages" id="chatmsg">
+                    {% for message in messages %}
+                    <div class="direct-chat-msg right">
+                        <div class="direct-chat-infos clearfix">
+                            <span class="direct-chat-name float-right">{{ message.user.username }}</span>
+                        </div>
+
+                        <img class="direct-chat-img" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/User-avatar.svg/120px-User-avatar.svg.png?20201213175635" alt="Message User Image">
+
+                        <div class="direct-chat-text">
+                            {{ message.content }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer">
+                <form action="#" method="post">
+                    <div class="input-group">
+                        <input type="text" id='msgcontent' name="message" placeholder="Type Message ..." class="form-control">
+                        <span class="input-group-append">
+                            <button  id='sendmsg' class="btn btn-success">Send</button>
+                        </span>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+
+    </div>
+
+    {% endblock %}
+
+    {% block scripts %}
+
+    {{ room.slug|json_script:"json-roomname" }}
+    {{ request.user.username|json_script:"json-username" }}
+
+    <script>
+        const roomName =JSON.parse(document.getElementById('json-roomname').textContent);
+        const username =JSON.parse(document.getElementById('json-username').textContent);
+        const chatScoket =new WebSocket(
+            'ws://'
+            + window.location.host 
+            + '/ws/' 
+            + roomName 
+            + '/'
+        );
+    chatScoket.onmessage=function(e){
+        console.log("Connected")
+        const data =JSON.parse(e.data);
+        console.log("hereeee")
+        if (data.msg){
+            console.log("Iamhere")
+            let html='<div class="direct-chat-msg right"> <div class="direct-chat-infos clearfix"> <span class="direct-chat-name float-right">'+data.username+'</span></div> <img class="direct-chat-img" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/User-avatar.svg/120px-User-avatar.svg.png?20201213175635" alt="Message User Image"><div class="direct-chat-text">'+ data.msg +'</div> </div>';
+            document.querySelector('#chatmsg').innerHTML += html;
+        }
+        else{
+            alert('Empty message');
+        }
+    
+    }
+    chatScoket.onclose=function(e){
+        console.log("disconnected")
+    }
+
+    document.querySelector('#sendmsg').onclick = function(e){
+
+        e.preventDefault();
+        
+        const messageinput = document.querySelector('#msgcontent');
+        const msg = messageinput.value;
+        
+
+        chatScoket.send(JSON.stringify({
+            "msg": msg,
+            "username": username,
+            "room": roomName,
+            
+        }));
+        console.log("send to db")
+        messageinput.value = '';
+
+        return false;
+    }
+    </script>
+    {% endblock %}
